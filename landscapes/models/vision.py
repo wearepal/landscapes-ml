@@ -38,7 +38,7 @@ class ResNet(ClassificationModel):
     @parsable
     def __init__(
         self,
-        dataset: Optional[CdtVisionDataset],
+        dataset: CdtVisionDataset,
         *,
         features_only: bool = False,
         pretrained: bool = False,
@@ -74,7 +74,7 @@ class CLIP(ClassificationModel):
     @parsable
     def __init__(
         self,
-        dataset: Optional[CdtVisionDataset],
+        dataset: CdtVisionDataset,
         *,
         features_only: bool = False,
         version: CLIPVersion = CLIPVersion.ViT_B32,
@@ -108,7 +108,7 @@ class RegNet(ClassificationModel):
     @parsable
     def __init__(
         self,
-        dataset: Optional[CdtVisionDataset],
+        dataset: CdtVisionDataset,
         *,
         depth: int,
         w_0: int,
@@ -208,7 +208,7 @@ class ConvNeXt(ClassificationModel):
     @parsable
     def __init__(
         self,
-        dataset: Optional[CdtVisionDataset],
+        dataset: CdtVisionDataset,
         *,
         features_only: bool = False,
         pretrained: bool = False,
