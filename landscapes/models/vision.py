@@ -86,7 +86,7 @@ class CLIP(ClassificationModel):
 
     @implements(Model)
     def build(self, dataset: CdtVisionDataset) -> Tuple[nn.Module, int]:
-        import clip
+        import clip  # type: ignore
 
         model, self.transforms = clip.load(
             name=self.version.value, device="cpu", download_root=self.download_root  # type: ignore
