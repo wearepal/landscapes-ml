@@ -1,17 +1,16 @@
 """NICO data-module."""
-from typing import Any, Optional
+from typing import Any, List, Optional
 
 import attr
 from conduit.data.datamodules.base import CdtDataModule
 from conduit.data.datamodules.vision.base import CdtVisionDataModule
-from conduit.data.datasets.utils import CdtDataLoader, stratified_split
+from conduit.data.datasets.utils import CdtDataLoader, PillowTform, stratified_split
 from conduit.data.structures import NamedSample, TrainValTestSplit
 from conduit.types import Stage
 import pytorch_lightning as pl
 from pytorch_lightning import LightningDataModule
 from ranzen import implements
 import torchvision.transforms as T
-from torchvision.transforms.functional import InterpolationMode
 
 from landscapes.data.datasets.wakehurst import Wakehurst
 
@@ -22,28 +21,32 @@ __all__ = ["WakehurstDataModule"]
 class WakehurstDataModule(CdtVisionDataModule[Wakehurst, Wakehurst.SampleType]):
     """Data-module for the NICO dataset."""
 
-    image_size: int = 256
     imagery: Wakehurst.ImageryType = Wakehurst.ImageryType.AERIAL
     predict_data: Wakehurst = attr.field(init=False)
 
     @property  # type: ignore[misc]
     @implements(CdtVisionDataModule)
     def _default_train_transforms(self) -> T.Compose:
-        base_transforms = T.Compose(
-            [
-                T.Resize(self.image_size, interpolation=InterpolationMode.BICUBIC),
-                T.CenterCrop(self.image_size),
-                T.TrivialAugmentWide(),
-                T.RandomErasing(),
-            ]
-        )
-        normalization = super()._default_train_transforms
-        return T.Compose([base_transforms, normalization])
+        transforms_ls: List[PillowTform] = [
+            T.TrivialAugmentWide(),
+            T.RandomErasing(),
+            T.ToTensor(),
+        ]
+        if self.norm_values is not None:
+            transforms_ls.append(T.Normalize(mean=self.norm_values.mean, std=self.norm_values.std))
+
+        return T.Compose(transforms_ls)
 
     @property  # type: ignore[misc]
     @implements(CdtVisionDataModule)
     def _default_test_transforms(self) -> T.Compose:
-        return self._default_train_transforms
+        transforms_ls: List[PillowTform] = [
+            T.ToTensor(),
+        ]
+        if self.norm_values is not None:
+            transforms_ls.append(T.Normalize(mean=self.norm_values.mean, std=self.norm_values.std))
+
+        return T.Compose(transforms_ls)
 
     @implements(LightningDataModule)
     def prepare_data(self, *args: Any, **kwargs: Any) -> None:
