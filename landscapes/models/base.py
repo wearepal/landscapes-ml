@@ -17,9 +17,8 @@ __all__ = [
 class Model(nn.Module, metaclass=ABCMeta):
     _logger: Optional[logging.Logger] = None
 
-    def __init__(self, dataset: Optional[CdtDataset]) -> None:
+    def __init__(self, dataset: CdtDataset) -> None:
         super().__init__()
-        assert dataset is not None
         self.model, self.out_dim = self.build(dataset)
 
     @property
@@ -38,7 +37,7 @@ class Model(nn.Module, metaclass=ABCMeta):
 
 
 class ClassificationModel(Model, metaclass=ABCMeta):
-    def __init__(self, dataset: CdtDataset, features_only: bool = False) -> None:
+    def __init__(self, dataset: CdtDataset, *, features_only: bool = False) -> None:
         super().__init__(dataset=dataset)
         self.features_only = features_only
         self.feature_dim = self.out_dim
