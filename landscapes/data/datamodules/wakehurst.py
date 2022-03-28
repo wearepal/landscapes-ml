@@ -33,7 +33,7 @@ class WakehurstDataModule(CdtVisionDataModule[Wakehurst, Wakehurst.SampleType]):
             [
                 T.Resize(self.image_size, interpolation=InterpolationMode.BICUBIC),
                 T.CenterCrop(self.image_size),
-                T.TrivialAugmentWide,
+                T.TrivialAugmentWide(),
                 T.RandomErasing(),
             ]
         )

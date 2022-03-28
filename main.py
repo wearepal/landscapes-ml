@@ -5,7 +5,7 @@ from ranzen.hydra import Option
 
 from landscapes.algorithms import ERM
 from landscapes.data.datamodules import WakehurstDataModule
-from landscapes.models.meta import BitFit, ExponentialMovingAverage, LinearProbe
+from landscapes.models.meta import BitFit, EmaModel, LinearProbe
 from landscapes.models.vision import CLIP, ConvNeXt, RegNet, ResNet
 from landscapes.relay import LandscapesRelay
 
@@ -23,7 +23,7 @@ if __name__ == "__main__":
     mm_ops: list[type[Any] | Option] = [
         Option(LinearProbe, "lp"),
         Option(BitFit, "bitfit"),
-        Option(ExponentialMovingAverage, "ema"),
+        Option(EmaModel, "ema"),
     ]
 
     LandscapesRelay.with_hydra(

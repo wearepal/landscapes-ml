@@ -4,15 +4,13 @@ from ranzen.decorators import implements
 from torch import Tensor
 import torch.nn as nn
 
-from landscapes.models.base import Model
-
 __all__ = [
     "MetaModel",
 ]
 
 
 class MetaModel(nn.Module, metaclass=ABCMeta):
-    def __init__(self, model: Model) -> None:
+    def __init__(self, model: nn.Module) -> None:
         super().__init__()
         self.model = model
 
