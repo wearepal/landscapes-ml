@@ -42,17 +42,16 @@ class Wakehurst(CdtVisionDataset[TernarySample, Tensor, None]):
         transform: Optional[ImageTform] = None,
     ) -> None:
         self.root = Path(root)
-        self._base_dir = self.root / self.__class__.__name__.lower()
+        self.split = str_to_enum(str_=split, enum=self.Split)
+        self._base_dir = self.root / self.__class__.__name__.lower() / self.split.value
         if split is WakehurstSplit.TRAIN:
             self._base_dir /= imagery.value
         self._metadata_path = self._base_dir / "metadata.csv"
-        self.split = str_to_enum(str_=split, enum=self.Split)
         self.imagery = str_to_enum(str_=imagery, enum=ImageryType)
 
         if not self._metadata_path.exists():
             self._extract_metadata()
-
-        self.metadata = pd.concat(pd.read_csv(self._base_dir / "metadata.csv"), ignore_index=True)
+        self.metadata = pd.DataFrame(pd.read_csv(self._base_dir / "metadata.csv"))
 
         x = self.metadata["filepath"].to_numpy()
         y = torch.as_tensor(self.metadata["label"].to_numpy(), dtype=torch.long)

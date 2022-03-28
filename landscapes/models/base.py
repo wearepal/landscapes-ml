@@ -2,7 +2,6 @@ from abc import ABCMeta, abstractmethod
 import logging
 from typing import Optional, Tuple
 
-from conduit.data import CdtDataset
 from conduit.logging import init_logger
 from ranzen.decorators import implements
 from torch import Tensor
@@ -17,9 +16,11 @@ __all__ = [
 class Model(nn.Module, metaclass=ABCMeta):
     _logger: Optional[logging.Logger] = None
 
-    def __init__(self, dataset: CdtDataset) -> None:
+    def __init__(self, target_dim: Optional[int]) -> None:
+        assert target_dim is not None
         super().__init__()
-        self.model, self.out_dim = self.build(dataset)
+        self.model, self.out_dim = self.build(target_dim)
+        self.target_dim = target_dim
 
     @property
     def logger(self) -> logging.Logger:
@@ -28,7 +29,7 @@ class Model(nn.Module, metaclass=ABCMeta):
         return self._logger
 
     @abstractmethod
-    def build(self, dataset: CdtDataset) -> Tuple[nn.Module, int]:
+    def build(self, target_dim: int) -> Tuple[nn.Module, int]:
         ...
 
     @implements(nn.Module)
@@ -37,16 +38,16 @@ class Model(nn.Module, metaclass=ABCMeta):
 
 
 class ClassificationModel(Model, metaclass=ABCMeta):
-    def __init__(self, dataset: CdtDataset, *, features_only: bool = False) -> None:
-        super().__init__(dataset=dataset)
+    def __init__(self, target_dim: Optional[int], *, features_only: bool = False) -> None:
+        super().__init__(target_dim=target_dim)
         self.features_only = features_only
         self.feature_dim = self.out_dim
-        self.out_dim = dataset.card_y
+
         if self.features_only:
             self.classifier = nn.Identity()
         else:
             self.classifier = self.build_classifier(
-                in_dim=self.feature_dim, num_classes=self.out_dim
+                in_dim=self.feature_dim, num_classes=self.target_dim
             )
         self.encoder = self.model
         self.model = nn.Sequential(self.encoder, self.classifier)

@@ -1,13 +1,22 @@
 import math
 from typing import Tuple
 
+from PIL import Image
 import torch
 from torch import Tensor
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.transforms.functional as TF  # type: ignore
 
-__class__ = ["RandomCutmix"]
+__class__ = [
+    "RandomCutmix",
+    "rgba_to_rgb",
+]
+
+
+def rgba_to_rgb(image: Image.Image) -> Image.Image:
+    """Conver an image in RGBA format to RGB."""
+    return image.convert("RGB")
 
 
 class RandomCutmix(nn.Module):

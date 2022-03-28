@@ -4,11 +4,11 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 import attr
-from fairscale.nn import auto_wrap
+from fairscale.nn import auto_wrap  # type: ignore
 from hydra.utils import instantiate
 import numpy as np
 from omegaconf import DictConfig
-import pandas as pd
+import pandas as pd  # type: ignore
 import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
 from ranzen.decorators import implements
@@ -35,7 +35,7 @@ class LandscapesRelay(Relay):
     trainer: DictConfig
     logger: DictConfig
     seed: Optional[int] = 42
-    results_dir: str = "results"
+    save_dir: str = "results"
 
     @classmethod
     @implements(Relay)
@@ -75,7 +75,7 @@ class LandscapesRelay(Relay):
         dm: WakehurstDataModule = instantiate(self.dm)
         dm.prepare_data()
         dm.setup()
-        model = instantiate(self.model, dataset=dm.train_data)
+        model = instantiate(self.model, target_dim=dm.card_y)
 
         if self.meta_model is not None:
             model: nn.Module = instantiate(self.meta_model, model=model)
@@ -84,10 +84,12 @@ class LandscapesRelay(Relay):
         model = auto_wrap(model)
 
         metrics = {
-            "F1": F1Score(average="weighted", num_classes=dm.card_y),
-            "Calibration": CalibrationError(norm="l1"),
-            "Aggregate Accuracy": Accuracy(average="micro"),
-            "Balanced Accuracy": Accuracy(average="weighted", num_classes=dm.card_y),
+            "F1": F1Score(average="weighted", num_classes=dm.card_y, compute_on_step=True),
+            "Calibration": CalibrationError(norm="l1", compute_on_step=True),
+            "Aggregate Accuracy": Accuracy(average="micro", compute_on_step=True),
+            "Balanced Accuracy": Accuracy(
+                average="weighted", num_classes=dm.card_y, compute_on_step=True
+            ),
         }
         alg: Algorithm = instantiate(self.alg, model=model, metrics=metrics)
 
@@ -116,18 +118,31 @@ class LandscapesRelay(Relay):
             model=alg,
             dataloaders=dm.test_dataloader(),
         )
-        # Produce predictions for the unlabeled data
+        # Generate predictions for the unlabeled data
         predictions_ls = trainer.predict(
             model=alg,
             dataloaders=dm.predict_dataloader(),
         )
         assert predictions_ls is not None
-        predictions_np = torch.stack(predictions_ls, dim=0).cpu().numpy()
-        filenames = dm.predict_data.x
-
+        predictions_np = torch.cat(predictions_ls, dim=0).cpu().numpy()
+        filenames = dm.predict_data.x[: len(predictions_np)]
         predictions_df = pd.DataFrame(
             np.stack([filenames, predictions_np], axis=-1), columns=["filename", "prediction"]
         )
-        save_path = Path(self.results_dir).expanduser()
-        predictions_df.to_csv(save_path)
-        self.log(f"Predictions saved to {save_path.resolve()}")
+
+        save_dir = Path(self.save_dir).expanduser()
+        save_dir.mkdir(parents=True, exist_ok=True)
+        predictions_save_path = save_dir / "predictions.csv"
+        predictions_df.to_csv(predictions_save_path)
+        self.log(f"Predictions saved to '{predictions_save_path.resolve()}'")
+
+        model_save_path = save_dir / "model.pt"
+        save_dict = {
+            "config": {"model": dict(self.model)},
+            "state": model.state_dict(),
+        }
+        if self.meta_model is not None:
+            save_dict["config"]["meta_model"] = dict(self.meta_model)
+
+        torch.save(save_dict, model_save_path)
+        self.log(f"Model config and state saved to '{predictions_save_path.resolve()}'")

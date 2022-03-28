@@ -31,6 +31,7 @@ class ERM(Algorithm):
         metrics: Dict[str, Metric],
         lr: float = 5.0e-4,
         label_smoothing: float = 0.1,
+        batch_transforms: Optional[List[Callable[[Tensor, Tensor], Tensor]]] = None,
         optimizer_cls: str = "torch.optim.AdamW",
         optimizer_kwargs: Optional[DictConfig] = None,
         use_sam: bool = False,
@@ -40,7 +41,7 @@ class ERM(Algorithm):
         lr_sched_interval: TrainingMode = TrainingMode.epoch,
         lr_sched_freq: int = 1,
     ) -> None:
-        super().__init__(model=model, lr=lr, metrics=metrics)
+        super().__init__(model=model, lr=lr, metrics=metrics, batch_transforms=batch_transforms)
         self.loss_fn = CrossEntropyLoss(
             reduction=ReductionType.mean, label_smoothing=label_smoothing
         )
@@ -88,7 +89,7 @@ class ERM(Algorithm):
 
     @implements(Algorithm)
     def training_step(self, batch: BinarySample[Tensor], batch_idx: int) -> STEP_OUTPUT:
-        logits = self.model(batch.y)
+        logits = self.model(batch.x)
         loss = self.loss_fn(input=logits, target=batch.y)
 
         results_dict = {

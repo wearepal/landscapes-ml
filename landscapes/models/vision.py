@@ -7,7 +7,6 @@ from classy_vision.models import RegNet as ClassyRegNet
 from classy_vision.models.anynet import ActivationType, BlockType, StemType
 from classy_vision.models.regnet import RegNetParams
 from conduit.data.datasets.utils import PillowTform
-from conduit.data.datasets.vision.base import CdtVisionDataset
 from hydra.utils import to_absolute_path
 from ranzen.decorators import implements, parsable
 import torch
@@ -38,7 +37,7 @@ class ResNet(ClassificationModel):
     @parsable
     def __init__(
         self,
-        dataset: CdtVisionDataset,
+        target_dim: Optional[int],
         *,
         features_only: bool = False,
         pretrained: bool = False,
@@ -46,10 +45,10 @@ class ResNet(ClassificationModel):
     ) -> None:
         self.pretrained = pretrained
         self.version = version
-        super().__init__(dataset=dataset, features_only=features_only)
+        super().__init__(target_dim=target_dim, features_only=features_only)
 
     @implements(Model)
-    def build(self, dataset: CdtVisionDataset) -> Tuple[nn.Module, int]:
+    def build(self, target_dim: int) -> Tuple[nn.Module, int]:
         model: tvm.ResNet = getattr(tvm, f"resnet{self.version.value}")(pretrained=self.pretrained)
         out_dim = model.fc.in_features
         model.fc = nn.Identity()  # type: ignore
@@ -74,7 +73,7 @@ class CLIP(ClassificationModel):
     @parsable
     def __init__(
         self,
-        dataset: CdtVisionDataset,
+        target_dim: Optional[int],
         *,
         features_only: bool = False,
         version: CLIPVersion = CLIPVersion.ViT_B32,
@@ -82,10 +81,10 @@ class CLIP(ClassificationModel):
     ) -> None:
         self.version = version
         self.download_root = download_root
-        super().__init__(dataset=dataset, features_only=features_only)
+        super().__init__(target_dim=target_dim, features_only=features_only)
 
     @implements(Model)
-    def build(self, dataset: CdtVisionDataset) -> Tuple[nn.Module, int]:
+    def build(self, target_dim: int) -> Tuple[nn.Module, int]:
         import clip  # type: ignore
 
         model, self.transforms = clip.load(
@@ -108,7 +107,7 @@ class RegNet(ClassificationModel):
     @parsable
     def __init__(
         self,
-        dataset: CdtVisionDataset,
+        target_dim: Optional[int],
         *,
         depth: int,
         w_0: int,
@@ -145,7 +144,7 @@ class RegNet(ClassificationModel):
             bn_momentum=bn_momentum,  # type: ignore
         )
 
-        super().__init__(dataset=dataset, features_only=features_only)
+        super().__init__(target_dim=target_dim, features_only=features_only)
 
     def _load_from_checkpoint(self, checkpoint: str | Path) -> None:
         checkpoint = Path(to_absolute_path(str(checkpoint)))
@@ -162,7 +161,7 @@ class RegNet(ClassificationModel):
             f"Successfully loaded {self.__class__.__name__} model from path '{str(checkpoint)}'."
         )
 
-    def build(self, dataset: CdtVisionDataset) -> Tuple[nn.Module, int]:
+    def build(self, target_dim: int) -> Tuple[nn.Module, int]:
         regnet = ClassyRegNet(self.regnet_params)  # type: ignore
         # Now map the models to the structure we want to expose for SSL tasks
         # The upstream RegNet model is made of :
@@ -208,7 +207,7 @@ class ConvNeXt(ClassificationModel):
     @parsable
     def __init__(
         self,
-        dataset: CdtVisionDataset,
+        target_dim: Optional[int],
         *,
         features_only: bool = False,
         pretrained: bool = False,
@@ -217,10 +216,10 @@ class ConvNeXt(ClassificationModel):
         tvm.ConvNeXt
         self.pretrained = pretrained
         self.version = version
-        super().__init__(dataset=dataset, features_only=features_only)
+        super().__init__(target_dim=target_dim, features_only=features_only)
 
     @implements(Model)
-    def build(self, dataset: CdtVisionDataset) -> Tuple[nn.Module, int]:
+    def build(self, target_dim: int) -> Tuple[nn.Module, int]:
         model: tvm.ConvNeXt = getattr(tvm, self.version.value)(pretrained=self.pretrained)
         out_dim = cast(int, model.classifier[-1].in_features)
         model.classifier = nn.Identity()  # type: ignore

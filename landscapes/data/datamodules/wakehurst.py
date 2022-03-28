@@ -13,13 +13,14 @@ from ranzen import implements
 import torchvision.transforms as T
 
 from landscapes.data.datasets.wakehurst import Wakehurst
+from landscapes.transforms import rgba_to_rgb
 
 __all__ = ["WakehurstDataModule"]
 
 
 @attr.define(kw_only=True)
 class WakehurstDataModule(CdtVisionDataModule[Wakehurst, Wakehurst.SampleType]):
-    """Data-module for the NICO dataset."""
+    """PyTorch Lighgtning DataModule for the Wakehurst dataset."""
 
     imagery: Wakehurst.ImageryType = Wakehurst.ImageryType.AERIAL
     predict_data: Wakehurst = attr.field(init=False)
@@ -28,9 +29,10 @@ class WakehurstDataModule(CdtVisionDataModule[Wakehurst, Wakehurst.SampleType]):
     @implements(CdtVisionDataModule)
     def _default_train_transforms(self) -> T.Compose:
         transforms_ls: List[PillowTform] = [
+            rgba_to_rgb,
             T.TrivialAugmentWide(),
-            T.RandomErasing(),
             T.ToTensor(),
+            T.RandomErasing(p=0.1, value=0),
         ]
         if self.norm_values is not None:
             transforms_ls.append(T.Normalize(mean=self.norm_values.mean, std=self.norm_values.std))
@@ -41,6 +43,7 @@ class WakehurstDataModule(CdtVisionDataModule[Wakehurst, Wakehurst.SampleType]):
     @implements(CdtVisionDataModule)
     def _default_test_transforms(self) -> T.Compose:
         transforms_ls: List[PillowTform] = [
+            rgba_to_rgb,
             T.ToTensor(),
         ]
         if self.norm_values is not None:
@@ -53,7 +56,7 @@ class WakehurstDataModule(CdtVisionDataModule[Wakehurst, Wakehurst.SampleType]):
         Wakehurst(
             root=self.root,
             imagery=self.imagery,
-            split=Wakehurst.Split.TRAIN,
+            split=Wakehurst.Split.TEST,
         )
 
     @implements(CdtDataModule)
@@ -85,7 +88,7 @@ class WakehurstDataModule(CdtVisionDataModule[Wakehurst, Wakehurst.SampleType]):
             root=self.root,
             imagery=self.imagery,
             transform=self.test_transforms,
-            split=Wakehurst.Split.TRAIN,
+            split=Wakehurst.Split.TEST,
         )
 
     @implements(pl.LightningDataModule)

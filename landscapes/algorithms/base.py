@@ -23,7 +23,7 @@ class Algorithm(pl.LightningModule):
         *,
         metrics: Dict[str, Metric],
         lr: float = 5.0e-5,
-        batch_transforms: List[Callable[[Tensor, Tensor], Tensor]],
+        batch_transforms: Optional[List[Callable[[Tensor, Tensor], Tensor]]] = None,
     ) -> None:
         super().__init__()
         self.model = model
@@ -32,10 +32,11 @@ class Algorithm(pl.LightningModule):
         self.batch_transforms = batch_transforms
 
     def _apply_batch_transforms(self, batch: BinarySample[Tensor]) -> None:
-        for tform in self.batch_transforms:
-            transformed_x, transformed_y = tform(batch.x, batch.y)
-            batch.x = transformed_x
-            batch.y = transformed_y
+        if self.batch_transforms is not None:
+            for tform in self.batch_transforms:
+                transformed_x, transformed_y = tform(batch.x, batch.y)
+                batch.x = transformed_x
+                batch.y = transformed_y
 
     @implements(pl.LightningModule)
     def on_after_batch_transfer(self, batch: BinarySample[Tensor], dataloader_idx: Optional[int]):
@@ -80,7 +81,7 @@ class Algorithm(pl.LightningModule):
     @implements(pl.LightningModule)
     @torch.no_grad()
     def validation_step(
-        self, batch: BinarySample, batch_idx: int, dataloader_idx: int
+        self, batch: BinarySample, batch_idx: int, dataloader_idx: Optional[int] = None
     ) -> STEP_OUTPUT:
         return self.inference_step(batch=batch, stage=Stage.validate)
 
@@ -93,7 +94,9 @@ class Algorithm(pl.LightningModule):
 
     @implements(pl.LightningModule)
     @torch.no_grad()
-    def test_step(self, batch: BinarySample, batch_idx: int, dataloader_idx: int) -> STEP_OUTPUT:
+    def test_step(
+        self, batch: BinarySample, batch_idx: int, dataloader_idx: Optional[int] = None
+    ) -> STEP_OUTPUT:
         return self.inference_step(batch=batch, stage=Stage.test)
 
     @implements(pl.LightningModule)
