@@ -99,7 +99,6 @@ class LandscapesRelay(Relay):
         if raw_config is not None:
             logger.log_hyperparams(raw_config)  # type: ignore
         trainer.logger = logger
-
         # Runs routines to tune hyperparameters before training.
         trainer.tune(
             model=alg,
@@ -113,11 +112,11 @@ class LandscapesRelay(Relay):
             val_dataloaders=dm.val_dataloader(),
         )
         # Test the model
-
         trainer.test(
             model=alg,
             dataloaders=dm.test_dataloader(),
         )
+        # Produce predictions for the unlabeled data
         predictions_ls = trainer.predict(
             model=alg,
             dataloaders=dm.predict_dataloader(),
