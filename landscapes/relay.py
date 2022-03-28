@@ -1,7 +1,7 @@
 from __future__ import annotations
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, cast
 
 import attr
 from fairscale.nn import auto_wrap  # type: ignore
@@ -14,9 +14,9 @@ from pytorch_lightning.loggers import WandbLogger
 from ranzen.decorators import implements
 from ranzen.hydra import Option, Relay
 import torch
+from torch import Tensor
 import torch.nn as nn
 from torchmetrics.classification.accuracy import Accuracy
-from torchmetrics.classification.calibration_error import CalibrationError
 from torchmetrics.classification.f_beta import F1Score
 
 from landscapes.algorithms.base import Algorithm
@@ -35,7 +35,7 @@ class LandscapesRelay(Relay):
     trainer: DictConfig
     logger: DictConfig
     seed: Optional[int] = 42
-    save_dir: str = "results"
+    save_dir: str = "."
 
     @classmethod
     @implements(Relay)
@@ -85,7 +85,6 @@ class LandscapesRelay(Relay):
 
         metrics = {
             "F1": F1Score(average="weighted", num_classes=dm.card_y, compute_on_step=True),
-            "Calibration": CalibrationError(norm="l1", compute_on_step=True),
             "Aggregate Accuracy": Accuracy(average="micro", compute_on_step=True),
             "Balanced Accuracy": Accuracy(
                 average="weighted", num_classes=dm.card_y, compute_on_step=True
@@ -123,7 +122,8 @@ class LandscapesRelay(Relay):
             model=alg,
             dataloaders=dm.predict_dataloader(),
         )
-        assert predictions_ls is not None
+        predictions_ls = cast(List[Tensor], predictions_ls)
+
         predictions_np = torch.cat(predictions_ls, dim=0).cpu().numpy()
         filenames = dm.predict_data.x[: len(predictions_np)]
         predictions_df = pd.DataFrame(

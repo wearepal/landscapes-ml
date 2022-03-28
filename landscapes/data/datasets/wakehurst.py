@@ -54,7 +54,11 @@ class Wakehurst(CdtVisionDataset[TernarySample, Tensor, None]):
         self.metadata = pd.DataFrame(pd.read_csv(self._base_dir / "metadata.csv"))
 
         x = self.metadata["filepath"].to_numpy()
-        y = torch.as_tensor(self.metadata["label"].to_numpy(), dtype=torch.long)
+        y = (
+            torch.as_tensor(self.metadata["label"].to_numpy(), dtype=torch.long)
+            if "label" in self.metadata.columns
+            else None
+        )
 
         super().__init__(x=x, y=y, transform=transform, image_dir=self._base_dir)
 
@@ -66,14 +70,18 @@ class Wakehurst(CdtVisionDataset[TernarySample, Tensor, None]):
             # Glob images from child folders recusrively, excluding hidden files
             image_paths.extend(self._base_dir.glob(f"**/[!.]*.{ext}"))
         image_paths_str = [str(image.relative_to(self._base_dir)) for image in image_paths]
-        filepaths = pd.Series(image_paths_str)
-        metadata = cast(
-            pd.DataFrame,
-            filepaths.str.split("/", expand=True)  # type: ignore[attr-defined]
-            .dropna(axis=1)
-            .rename(columns={0: "label", 1: "filename"}),
-        )
-        metadata["filepath"] = filepaths
-        metadata.sort_index(axis=1, inplace=True)
-        metadata.sort_values(by=["filepath"], axis=0, inplace=True)
+        filepaths = pd.Series(image_paths_str, name="filepath")
+        if self.split is self.Split.TRAIN:
+            metadata = cast(
+                pd.DataFrame,
+                filepaths.str.split("/", expand=True)  # type: ignore[attr-defined]
+                .dropna(axis=1)
+                .rename(columns={0: "label", 1: "filename"}),
+            )
+            metadata["filepath"] = filepaths
+            metadata.sort_index(axis=1, inplace=True)
+            metadata.sort_values(by=["filepath"], axis=0, inplace=True)
+        else:
+            metadata = filepaths
+            metadata.sort_values(inplace=True)
         metadata.to_csv(self._metadata_path)
