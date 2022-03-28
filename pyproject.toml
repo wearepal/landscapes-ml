@@ -38,7 +38,6 @@ license = "Apache License 2.0"
 packages = [
   { include = "landscapes" },
   { include = "hydra_plugins" },
-  { include = "hydra_plugins/submitit_launcher" },
 ]
 include=["ranzen/py.typed"]
 classifiers=[
