@@ -72,10 +72,10 @@ class LandscapesRelay(Relay):
 
         trainer: pl.Trainer = instantiate(self.trainer)
 
-        datamodule: WakehurstDataModule = instantiate(self.dm)
-        datamodule.prepare_data()
-        datamodule.setup()
-        model = instantiate(self.model, dataset=datamodule.train_data)
+        dm: WakehurstDataModule = instantiate(self.dm)
+        dm.prepare_data()
+        dm.setup()
+        model = instantiate(self.model, dataset=dm.train_data)
 
         if self.meta_model is not None:
             model: nn.Module = instantiate(self.meta_model, model=model)
@@ -84,16 +84,16 @@ class LandscapesRelay(Relay):
         model = auto_wrap(model)
 
         metrics = {
-            "F1": F1Score(average="weighted"),
+            "F1": F1Score(average="weighted", num_classes=dm.card_y),
             "Calibration": CalibrationError(norm="l1"),
             "Aggregate Accuracy": Accuracy(average="micro"),
-            "Balanced Accuracy": Accuracy(average="weighted"),
+            "Balanced Accuracy": Accuracy(average="weighted", num_classes=dm.card_y),
         }
-        algorithm: Algorithm = instantiate(self.alg, model=model, metrics=metrics)
+        alg: Algorithm = instantiate(self.alg, model=model, metrics=metrics)
 
         if self.logger.get("group", None) is None:
-            default_group = f"{datamodule.__class__.__name__.removesuffix('DataModule')}"
-            default_group += "_".join(obj.__class__.__name__ for obj in (model, algorithm))
+            default_group = f"{dm.__class__.__name__.removesuffix('DataModule')}"
+            default_group += "_".join(obj.__class__.__name__ for obj in (model, alg))
             self.logger["group"] = default_group
         logger: WandbLogger = instantiate(self.logger, reinit=True)
         if raw_config is not None:
@@ -102,29 +102,29 @@ class LandscapesRelay(Relay):
 
         # Runs routines to tune hyperparameters before training.
         trainer.tune(
-            model=algorithm,
-            train_dataloaders=datamodule.train_dataloader(),
-            val_dataloaders=datamodule.val_dataloader(),
+            model=alg,
+            train_dataloaders=dm.train_dataloader(),
+            val_dataloaders=dm.val_dataloader(),
         )
         # Train the model
         trainer.fit(
-            model=algorithm,
-            train_dataloaders=datamodule.train_dataloader(),
-            val_dataloaders=datamodule.val_dataloader(),
+            model=alg,
+            train_dataloaders=dm.train_dataloader(),
+            val_dataloaders=dm.val_dataloader(),
         )
         # Test the model
 
         trainer.test(
-            model=algorithm,
-            dataloaders=datamodule.test_dataloader(),
+            model=alg,
+            dataloaders=dm.test_dataloader(),
         )
         predictions_ls = trainer.predict(
-            model=algorithm,
-            dataloaders=datamodule.predict_dataloader(),
+            model=alg,
+            dataloaders=dm.predict_dataloader(),
         )
         assert predictions_ls is not None
         predictions_np = torch.stack(predictions_ls, dim=0).cpu().numpy()
-        filenames = datamodule.predict_data.x
+        filenames = dm.predict_data.x
 
         predictions_df = pd.DataFrame(
             np.stack([filenames, predictions_np], axis=-1), columns=["filename", "prediction"]
