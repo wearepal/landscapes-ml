@@ -13,7 +13,7 @@ persist_workers: false
 pin_memory: true
 stratified_sampling: false
 instance_weighting: false
-training_mode: epoch
+training_mode: step
 root: 
 train_transforms: null
 test_transforms: null

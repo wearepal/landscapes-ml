@@ -19,8 +19,8 @@ class EmaModel(MetaModel):
         self.decay = decay
         self.update_frequency = update_frequency
         self._training_iteration = 0
-        self.ema_model = AveragedModel(model, avg_fn=self._ema_update)
         super().__init__(model)
+        self.ema_model = AveragedModel(self.model, avg_fn=self._ema_update)
 
     @torch.no_grad()
     def _ema_update(
@@ -32,7 +32,7 @@ class EmaModel(MetaModel):
         """
         Perform an EMA update of the model's parameters.
         """
-        return self.decay * avg_model_param + (1 - self.decay * model_param)
+        return self.decay * avg_model_param + (1 - self.decay) * model_param
 
     def forward(self, x: Tensor) -> Tensor:
         if self.training:
