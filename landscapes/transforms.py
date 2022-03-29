@@ -11,7 +11,7 @@ from typing_extensions import Protocol
 
 __class__ = [
     "BatchTransform",
-    "RandomCutmix",
+    "RandomCutMix",
     "rgba_to_rgb",
 ]
 
@@ -26,7 +26,7 @@ class BatchTransform(Protocol):
         ...
 
 
-class RandomCutmix:
+class RandomCutMix:
     """Randomly apply Cutmix to the provided batch and targets.
     The class implements the data augmentations as described in the paper
     `"CutMix: Regularization Strategy to Train Strong Classifiers with Localizable Features"

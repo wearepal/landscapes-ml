@@ -73,8 +73,8 @@ class WakehurstDataModule(CdtVisionDataModule[Wakehurst, Wakehurst.SampleType]):
             default_train_prop=train_val_prop,
             seed=self.seed,
         )
-        train_data, val_data = stratified_split(
-            all_data,
+        val_data, train_data = stratified_split(
+            train_val_data,
             default_train_prop=self.val_prop / train_val_prop,
             seed=self.seed,
         )
@@ -102,3 +102,13 @@ class WakehurstDataModule(CdtVisionDataModule[Wakehurst, Wakehurst.SampleType]):
             drop_last=False,
             persistent_workers=self.persist_workers,
         )
+
+    def __str__(self) -> str:
+        ds_name = self._train_data_base.__class__.__name__
+        size_info = (
+            f"- Number of training samples: {len(self.train_data)}\n"
+            f"- Number of validation samples: {len(self.val_data)}\n"
+            f"- Number of test samples: {len(self.test_data)}\n"
+            f"- Number of samples to be predicted: {len(self.predict_data)}"
+        )
+        return f"\nDataModule for dataset of type '{ds_name}'\n{size_info}"

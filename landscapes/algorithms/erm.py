@@ -93,11 +93,9 @@ class ERM(Algorithm):
         logits = self.model(batch.x)
         loss = self.loss_fn(input=logits, target=batch.y)
 
-        results_dict = {
-            "batch_loss": loss.item(),
-        }
+        results_dict = {"batch_loss": loss.detach().cpu().item()}
         results_dict = prefix_keys(dict_=results_dict, prefix=str(Stage.fit), sep="/")
-        self.log_dict(results_dict)
+        self.log_dict(results_dict, on_step=True, sync_dist=True)
 
         return {"loss": loss}
 

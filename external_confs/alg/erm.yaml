@@ -16,6 +16,9 @@ scheduler_kwargs: null
 lr_sched_interval: epoch
 lr_sched_freq: 1
 batch_transforms:
-  - _target_: landscapes.transforms.RandomCutmix
+  - _target_: landscapes.transforms.RandomCutMix
     alpha: 1.0
+    num_classes: 5
+  - _target_: ranzen.torch.transforms.RandomMixUp.with_beta_dist
+    alpha: 0.2
     num_classes: 5

@@ -74,8 +74,9 @@ class LandscapesRelay(Relay):
         dm: WakehurstDataModule = instantiate(self.dm)
         dm.prepare_data()
         dm.setup()
-        model = instantiate(self.model, target_dim=dm.card_y)
+        self.log(str(dm))
 
+        model = instantiate(self.model, target_dim=dm.card_y)
         if self.meta_model is not None:
             model: nn.Module = instantiate(self.meta_model, model=model)
         # enable parameter sharding with fairscale.
@@ -135,8 +136,8 @@ class LandscapesRelay(Relay):
         predictions_df.to_csv(predictions_save_path)
         self.log(f"Predictions saved to '{predictions_save_path.resolve()}'")
 
-        data_artifact = wandb.Artifact("predictions", type="predictions")
-        data_artifact.add_file(str(predictions_save_path.resolve()), name="test")
+        data_artifact = wandb.Artifact("predictions", type="data")
+        data_artifact.add_file(str(predictions_save_path.resolve()), name="test_predictions")
         logger.experiment.log_artifact(data_artifact)
 
         model_save_path = artifact_dir / "final_model.pt"
