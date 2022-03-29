@@ -1,0 +1,6 @@
+---
+defaults:
+  - /schema/meta_model: lp
+  - defaults
+  - _self_
+model: 
