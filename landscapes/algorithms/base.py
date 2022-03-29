@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import Any, Callable, Dict, List, Optional, Union, cast
+from typing import Any, Dict, List, Optional, Union, cast
 
 from conduit.data.structures import BinarySample, NamedSample
 from conduit.models.utils import aggregate_over_epoch, prefix_keys
@@ -13,6 +13,8 @@ import torch.nn as nn
 from torchmetrics import Metric
 from typing_extensions import TypeGuard
 
+from landscapes.transforms import BatchTransform
+
 __all__ = ["Algorithm"]
 
 
@@ -23,7 +25,7 @@ class Algorithm(pl.LightningModule):
         *,
         metrics: Dict[str, Metric],
         lr: float = 5.0e-5,
-        batch_transforms: Optional[List[Callable[[Tensor, Tensor], Tensor]]] = None,
+        batch_transforms: Optional[List[BatchTransform]] = None,
     ) -> None:
         super().__init__()
         self.model = model
@@ -34,13 +36,14 @@ class Algorithm(pl.LightningModule):
     def _apply_batch_transforms(self, batch: BinarySample[Tensor]) -> None:
         if self.batch_transforms is not None:
             for tform in self.batch_transforms:
-                transformed_x, transformed_y = tform(batch.x, batch.y)
+                transformed_x, transformed_y = tform(inputs=batch.x, targets=batch.y)
                 batch.x = transformed_x
                 batch.y = transformed_y
 
     @implements(pl.LightningModule)
     def on_after_batch_transfer(self, batch: BinarySample[Tensor], dataloader_idx: Optional[int]):
-        self._apply_batch_transforms(batch)
+        if self.training:
+            self._apply_batch_transforms(batch)
         return batch
 
     @abstractmethod

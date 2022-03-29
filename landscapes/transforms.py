@@ -7,8 +7,10 @@ from torch import Tensor
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.transforms.functional as TF  # type: ignore
+from typing_extensions import Protocol
 
 __class__ = [
+    "BatchTransform",
     "RandomCutmix",
     "rgba_to_rgb",
 ]
@@ -19,7 +21,12 @@ def rgba_to_rgb(image: Image.Image) -> Image.Image:
     return image.convert("RGB")
 
 
-class RandomCutmix(nn.Module):
+class BatchTransform(Protocol):
+    def __call__(self, inputs: Tensor, *, targets: Tensor) -> Tuple[Tensor, Tensor]:
+        ...
+
+
+class RandomCutmix:
     """Randomly apply Cutmix to the provided batch and targets.
     The class implements the data augmentations as described in the paper
     `"CutMix: Regularization Strategy to Train Strong Classifiers with Localizable Features"
@@ -43,38 +50,38 @@ class RandomCutmix(nn.Module):
         self.alpha = alpha
         self.inplace = inplace
 
-    def forward(self, x: Tensor, *, y: Tensor) -> Tuple[Tensor, Tensor]:
+    def __call__(self, inputs: Tensor, *, targets: Tensor) -> Tuple[Tensor, Tensor]:
         """
         :param batch: Float tensor of size (B, C, H, W)
         :param target: Integer tensor of size (B, )
         :returns: Randomly transformed batch.
         """
-        if x.ndim != 4:
-            raise ValueError("Batch ndim should be 4. Got {}".format(x.ndim))
-        elif y.ndim != 1:
-            raise ValueError("Target ndim should be 1. Got {}".format(y.ndim))
-        elif not x.is_floating_point():
-            raise TypeError("Batch dtype should be a float tensor. Got {}.".format(x.dtype))
-        elif y.dtype != torch.int64:
-            raise TypeError("Target dtype should be torch.int64. Got {}".format(y.dtype))
+        if inputs.ndim != 4:
+            raise ValueError("Batch ndim should be 4. Got {}".format(inputs.ndim))
+        elif targets.ndim != 1:
+            raise ValueError("Target ndim should be 1. Got {}".format(targets.ndim))
+        elif not inputs.is_floating_point():
+            raise TypeError("Batch dtype should be a float tensor. Got {}.".format(inputs.dtype))
+        elif targets.dtype != torch.int64:
+            raise TypeError("Target dtype should be torch.int64. Got {}".format(targets.dtype))
 
         if not self.inplace:
-            x = x.clone()
-            y = y.clone()
+            inputs = inputs.clone()
+            targets = targets.clone()
 
-        if y.ndim == 1:
-            y = F.one_hot(y, num_classes=self.num_classes).to(dtype=x.dtype)
+        if targets.ndim == 1:
+            targets = F.one_hot(targets, num_classes=self.num_classes).to(dtype=inputs.dtype)
 
         if torch.rand(1).item() >= self.p:
-            return x, y
+            return inputs, targets
 
         # It's faster to roll the batch by one instead of shuffling it to create image pairs
-        batch_rolled = x.roll(1, 0)
-        target_rolled = y.roll(1, 0)
+        batch_rolled = inputs.roll(1, 0)
+        target_rolled = targets.roll(1, 0)
 
         # Implemented as on cutmix paper, page 12 (with minor corrections on typos).
         lambda_param = float(torch._sample_dirichlet(torch.tensor([self.alpha, self.alpha]))[0])
-        W, H = TF.get_image_size(x)
+        W, H = TF.get_image_size(inputs)
 
         r_x = torch.randint(W, (1,))
         r_y = torch.randint(H, (1,))
@@ -88,13 +95,13 @@ class RandomCutmix(nn.Module):
         x2 = int(torch.clamp(r_x + r_w_half, max=W))
         y2 = int(torch.clamp(r_y + r_h_half, max=H))
 
-        x[:, :, y1:y2, x1:x2] = batch_rolled[:, :, y1:y2, x1:x2]
+        inputs[:, :, y1:y2, x1:x2] = batch_rolled[:, :, y1:y2, x1:x2]
         lambda_param = float(1.0 - (x2 - x1) * (y2 - y1) / (W * H))
 
         target_rolled.mul_(1.0 - lambda_param)
-        y.mul_(lambda_param).add_(target_rolled)
+        targets.mul_(lambda_param).add_(target_rolled)
 
-        return x, y
+        return inputs, targets
 
     def __repr__(self) -> str:
         s = self.__class__.__name__ + "("

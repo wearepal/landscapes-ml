@@ -19,6 +19,7 @@ import torch.nn as nn
 from torchmetrics import Metric
 
 from landscapes.algorithms.base import Algorithm
+from landscapes.transforms import BatchTransform
 
 __all__ = ["ERM"]
 
@@ -31,7 +32,7 @@ class ERM(Algorithm):
         metrics: Dict[str, Metric],
         lr: float = 5.0e-4,
         label_smoothing: float = 0.1,
-        batch_transforms: Optional[List[Callable[[Tensor, Tensor], Tensor]]] = None,
+        batch_transforms: Optional[List[BatchTransform]] = None,
         optimizer_cls: str = "torch.optim.AdamW",
         optimizer_kwargs: Optional[DictConfig] = None,
         use_sam: bool = False,

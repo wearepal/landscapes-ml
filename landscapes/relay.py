@@ -18,6 +18,7 @@ from torch import Tensor
 import torch.nn as nn
 from torchmetrics.classification.accuracy import Accuracy
 from torchmetrics.classification.f_beta import F1Score
+import wandb
 
 from landscapes.algorithms.base import Algorithm
 from landscapes.conf import WandbLoggerConf
@@ -35,7 +36,7 @@ class LandscapesRelay(Relay):
     trainer: DictConfig
     logger: DictConfig
     seed: Optional[int] = 42
-    save_dir: str = "."
+    arftifact_dir: str = "."
 
     @classmethod
     @implements(Relay)
@@ -70,8 +71,6 @@ class LandscapesRelay(Relay):
         self.log(f"Current working directory: '{os.getcwd()}'")
         pl.seed_everything(self.seed)
 
-        trainer: pl.Trainer = instantiate(self.trainer)
-
         dm: WakehurstDataModule = instantiate(self.dm)
         dm.prepare_data()
         dm.setup()
@@ -99,7 +98,7 @@ class LandscapesRelay(Relay):
         logger: WandbLogger = instantiate(self.logger, reinit=True)
         if raw_config is not None:
             logger.log_hyperparams(raw_config)  # type: ignore
-        trainer.logger = logger
+        trainer: pl.Trainer = instantiate(self.trainer, logger=logger)
         # Runs routines to tune hyperparameters before training.
         trainer.tune(
             model=alg,
@@ -125,24 +124,26 @@ class LandscapesRelay(Relay):
         predictions_ls = cast(List[Tensor], predictions_ls)
 
         predictions_np = torch.cat(predictions_ls, dim=0).cpu().numpy()
-        filenames = dm.predict_data.x[: len(predictions_np)]
+        filenames = dm.predict_data.metadata["filename"].to_numpy()[: len(predictions_np)]
         predictions_df = pd.DataFrame(
-            np.stack([filenames, predictions_np], axis=-1), columns=["filename", "prediction"]
+            np.stack([filenames, predictions_np], axis=-1), columns=["filename", "label"]
         )
 
-        save_dir = Path(self.save_dir).expanduser()
-        save_dir.mkdir(parents=True, exist_ok=True)
-        predictions_save_path = save_dir / "predictions.csv"
+        artifact_dir = Path(self.arftifact_dir).expanduser()
+        artifact_dir.mkdir(parents=True, exist_ok=True)
+        predictions_save_path = artifact_dir / "predictions.csv"
         predictions_df.to_csv(predictions_save_path)
         self.log(f"Predictions saved to '{predictions_save_path.resolve()}'")
 
-        model_save_path = save_dir / "model.pt"
-        save_dict = {
-            "config": {"model": dict(self.model)},
-            "state": model.state_dict(),
-        }
-        if self.meta_model is not None:
-            save_dict["config"]["meta_model"] = dict(self.meta_model)
+        data_artifact = wandb.Artifact("predictions", type="predictions")
+        data_artifact.add_file(str(predictions_save_path.resolve()), name="test")
+        logger.experiment.log_artifact(data_artifact)
 
+        model_save_path = artifact_dir / "final_model.pt"
+        save_dict = {"state": model.state_dict(), "config": raw_config}
         torch.save(save_dict, model_save_path)
         self.log(f"Model config and state saved to '{predictions_save_path.resolve()}'")
+
+        model_artifact = wandb.Artifact("model", type="model")
+        model_artifact.add_file(str(model_save_path.resolve()), name="final")
+        logger.experiment.log_artifact(model_artifact)
