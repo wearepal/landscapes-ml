@@ -11,7 +11,7 @@ num_workers: 0
 seed: 47
 persist_workers: false
 pin_memory: true
-stratified_sampling: false
+stratified_sampling: true
 instance_weighting: false
 training_mode: step
 root: 

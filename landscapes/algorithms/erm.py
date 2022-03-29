@@ -39,7 +39,7 @@ class ERM(Algorithm):
         sam_rho: float = 0.05,
         scheduler_cls: Optional[str] = None,
         scheduler_kwargs: Optional[DictConfig] = None,
-        lr_sched_interval: TrainingMode = TrainingMode.epoch,
+        lr_sched_interval: TrainingMode = TrainingMode.step,
         lr_sched_freq: int = 1,
     ) -> None:
         super().__init__(model=model, lr=lr, metrics=metrics, batch_transforms=batch_transforms)
