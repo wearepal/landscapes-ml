@@ -1,0 +1,8 @@
+---
+defaults:
+  - /schema/meta_model: ema
+  - defaults
+  - _self_
+model: 
+decay: 0.99998 
+update_frequency: 1

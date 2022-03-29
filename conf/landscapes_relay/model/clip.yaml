@@ -1,0 +1,9 @@
+---
+defaults:
+  - /schema/model: clip
+  - defaults
+  - _self_
+target_dim: 
+features_only: false
+version: ViT_B32
+download_root: null

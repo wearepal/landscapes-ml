@@ -3,7 +3,7 @@ defaults:
   - /schema/model: regnet
   - defaults
   - _self_
-dataset: 
+target_dim:
 depth: 27
 w_0: 640
 w_a: 230.83
@@ -19,4 +19,4 @@ se_ratio: 0.25
 bn_epsilon: 1e-05
 bn_momentum: 0.1
 features_only: false
-checkpoint: null
+checkpoint: /srv/galene0/mb715/pretrained_models/seer/rg256gf.torch

@@ -1,0 +1,9 @@
+---
+defaults:
+  - /schema/model: convnext
+  - defaults
+  - _self_
+target_dim: 
+features_only: false
+pretrained: false
+version: BASE
