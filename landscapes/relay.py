@@ -143,7 +143,7 @@ class LandscapesRelay(Relay):
         model_save_path = artifact_dir / "final_model.pt"
         save_dict = {"state": model.state_dict(), "config": raw_config}
         torch.save(save_dict, model_save_path)
-        self.log(f"Model config and state saved to '{predictions_save_path.resolve()}'")
+        self.log(f"Model config and state saved to '{model_save_path.resolve()}'")
 
         model_artifact = wandb.Artifact("model", type="model")
         model_artifact.add_file(str(model_save_path.resolve()), name="final")

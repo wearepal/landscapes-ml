@@ -13,8 +13,8 @@ class LinearProbe(MetaModel):
 
 
 class BitFit(MetaModel):
-    def __init__(self, model: Model) -> None:
-        for name, param in model.named_parameters():
+    def __init__(self, model: ClassificationModel) -> None:
+        for name, param in model.encoder.named_parameters():
             if "bias" not in name:
                 param.requires_grad_(False)
         super().__init__(model=model)

@@ -20,5 +20,5 @@ class ERMConf:
     sam_rho: float = 0.05
     scheduler_cls: Optional[str] = None
     scheduler_kwargs: Any = None  # Optional[DictConfig]
-    lr_sched_interval: TrainingMode = TrainingMode.epoch
+    lr_sched_interval: TrainingMode = TrainingMode.step
     lr_sched_freq: int = 1
