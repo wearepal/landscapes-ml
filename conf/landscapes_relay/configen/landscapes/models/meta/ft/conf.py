@@ -13,4 +13,4 @@ class LinearProbeConf:
 @dataclass
 class BitFitConf:
     _target_: str = "landscapes.models.meta.ft.BitFit"
-    model: Any = MISSING  # Model
+    model: Any = MISSING  # ClassificationModel

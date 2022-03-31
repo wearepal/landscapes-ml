@@ -2,7 +2,7 @@
 defaults:
   - relay_schema
   - _self_
-  - dm: wakehurst
+  - dm: wakehurst/base
   - alg: erm
   - model: 
   - meta_model: 

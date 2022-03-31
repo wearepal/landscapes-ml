@@ -1,16 +1,19 @@
+from enum import Enum
 import math
-from typing import Tuple
+from typing import Tuple, Union
 
 from PIL import Image
+from ranzen.misc import str_to_enum
 import torch
 from torch import Tensor
-import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.transforms.functional as TF  # type: ignore
 from typing_extensions import Protocol
 
 __class__ = [
     "BatchTransform",
+    "ConvertPILImage",
+    "ImageMode",
     "RandomCutMix",
     "rgba_to_rgb",
 ]
@@ -19,6 +22,26 @@ __class__ = [
 def rgba_to_rgb(image: Image.Image) -> Image.Image:
     """Conver an image in RGBA format to RGB."""
     return image.convert("RGB")
+
+
+class ImageMode(Enum):
+
+    RGB = "RGB"
+    RGBA = "RGBA"
+    HSV = "HSV"
+    LAB = "LAB"
+    CMYK = "CMYK"
+    YCbCr = "YCbCr"
+
+
+class ConvertPILImage:
+    def __init__(self, mode: Union[ImageMode, str] = ImageMode.RGB) -> None:
+        if isinstance(mode, str):
+            mode = str_to_enum(str_=mode, enum=ImageMode)
+        self.mode = mode
+
+    def __call__(self, image: Image.Image) -> Image.Image:
+        return image.convert(self.mode.value)
 
 
 class BatchTransform(Protocol):
